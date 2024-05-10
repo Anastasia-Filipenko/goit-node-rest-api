@@ -1,8 +1,23 @@
 import express from "express";
 import morgan from "morgan";
 import cors from "cors";
-
+import mongoose from "mongoose";
 import contactsRouter from "./routes/contactsRouter.js";
+
+const uri =
+  "mongodb+srv://user:kM5x8jIrKbaoYl4E@cluster0.b8yf1ex.mongodb.net/db-contacts?retryWrites=true&w=majority&appName=Cluster0";
+
+async function run() {
+  try {
+    await mongoose.connect(uri);
+    console.log("Database connection successful");
+  } catch (error) {
+    console.log(error);
+    process.exit(1);
+  }
+}
+
+run().catch(console.dir);
 
 const app = express();
 
