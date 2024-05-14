@@ -7,6 +7,7 @@ import {
 
 import contacts from "../models/contacts.js";
 import mongoose from "mongoose";
+import { validateId } from "../helpers/validateId.js";
 
 export const getAllContacts = async (req, res, next) => {
   try {
@@ -21,10 +22,7 @@ export const getAllContacts = async (req, res, next) => {
 export const getOneContact = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
-    if (!isValidObjectId) {
-      throw HttpError(404);
-    }
+    validateId(id);
     const contact = await contacts.findById(id);
 
     return res.status(200).json(contact);
@@ -36,11 +34,7 @@ export const getOneContact = async (req, res, next) => {
 export const deleteContact = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
-    if (!isValidObjectId) {
-      throw HttpError(404);
-    }
-
+    validateId(id);
     const contact = await contacts.findByIdAndDelete(id);
 
     if (!contact) {
@@ -60,9 +54,7 @@ export const createContact = async (req, res, next) => {
       throw HttpError(400, error.message);
     }
 
-    const { name, email, phone, favorite } = req.body;
-
-    const contact = await contacts.create({ name, email, phone, favorite });
+    const contact = await contacts.create(req.body);
 
     return res.status(201).send(contact);
   } catch (error) {
@@ -74,10 +66,7 @@ export const updateContact = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
-    if (!isValidObjectId) {
-      throw HttpError(404);
-    }
+    validateId(id);
 
     const newContact = req.body;
 
@@ -103,12 +92,7 @@ export const updateContact = async (req, res, next) => {
 export async function updateStatusContact(req, res, next) {
   try {
     const { id } = req.params;
-
-    const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
-    if (!isValidObjectId) {
-      throw HttpError(404);
-    }
-
+    validateId(id);
     const { error } = updateFavoriteSchema.validate(req.body);
     if (error) {
       throw HttpError(400, error.message);
