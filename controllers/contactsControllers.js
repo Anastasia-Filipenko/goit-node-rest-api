@@ -1,14 +1,17 @@
-import contactsService from "../services/contactsServices.js";
 import HttpError from "../helpers/HttpError.js";
 import {
   createContactSchema,
   updateContactSchema,
+  updateFavoriteSchema,
 } from "../schemas/contactsSchemas.js";
-import validateBody from "../helpers/validateBody.js";
+
+import contacts from "../models/contacts.js";
+
 export const getAllContacts = async (req, res, next) => {
   try {
-    const contacts = await contactsService.listContacts();
-    return res.status(200).json(contacts);
+    const allContacts = await contacts.find();
+
+    return res.status(200).json(allContacts);
   } catch (error) {
     next(error);
   }
@@ -16,11 +19,7 @@ export const getAllContacts = async (req, res, next) => {
 
 export const getOneContact = async (req, res, next) => {
   try {
-    const contact = await contactsService.getContactById(req.params.id);
-
-    if (!contact) {
-      throw HttpError(404);
-    }
+    const contact = await contacts.findById(req.params.id);
 
     return res.status(200).json(contact);
   } catch (error) {
@@ -30,7 +29,7 @@ export const getOneContact = async (req, res, next) => {
 
 export const deleteContact = async (req, res, next) => {
   try {
-    const contact = await contactsService.removeContact(req.params.id);
+    const contact = await contacts.findByIdAndDelete(req.params.id);
 
     if (!contact) {
       throw HttpError(404);
@@ -49,11 +48,9 @@ export const createContact = async (req, res, next) => {
       throw HttpError(400, error.message);
     }
 
-    const { name, email, phone } = req.body;
+    const contact = await contacts.create(req.body);
 
-    const contact = await contactsService.addContact(name, email, phone);
-
-    return res.status(201).json(contact);
+    return res.status(201).send(contact);
   } catch (error) {
     next(error);
   }
@@ -61,27 +58,49 @@ export const createContact = async (req, res, next) => {
 
 export const updateContact = async (req, res, next) => {
   try {
-    const id = req.params.id;
-    const newContact = req.body;
-    const { name, email, phone } = newContact;
-
-    if (!name && !email && !phone) {
-      throw HttpError(400, "Body must have at least one field");
-    }
-
     const { error } = updateContactSchema.validate(req.body);
     if (error) {
       throw HttpError(400, error.message);
     }
 
-    const response = await contactsService.updateContact(id, newContact);
+    const response = await contacts.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
 
     if (!response) {
       throw HttpError(404);
     }
 
-    return res.status(200).json(response);
+    return res.send(response);
   } catch (error) {
     next(error);
   }
 };
+
+export async function updateStatusContact(req, res, next) {
+  try {
+    const { error } = updateFavoriteSchema.validate(req.body);
+    if (error) {
+      throw HttpError(400, error.message);
+    }
+
+    const newStatus = req.body.favorite;
+
+    const response = await contacts.findByIdAndUpdate(
+      req.params.id,
+      {
+        favorite: newStatus,
+      },
+      {
+        new: true,
+      }
+    );
+
+    if (!response) {
+      throw HttpError(404);
+    }
+    return res.send(response);
+  } catch (error) {
+    next(error);
+  }
+}
