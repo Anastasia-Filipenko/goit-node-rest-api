@@ -1,9 +1,10 @@
 import mongoose from "mongoose";
 import HttpError from "./HttpError.js";
 
-export const validateId = (id) => {
-  const isValidObjectId = mongoose.Types.ObjectId.isValid(id);
+export const validateId = (req, res, next) => {
+  const isValidObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
   if (!isValidObjectId) {
-    throw HttpError(404);
+    next(HttpError(404, "Invalid id"));
   }
+  next();
 };

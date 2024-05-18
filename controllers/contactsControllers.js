@@ -6,8 +6,6 @@ import {
 } from "../schemas/contactsSchemas.js";
 
 import contacts from "../models/contacts.js";
-import mongoose from "mongoose";
-import { validateId } from "../helpers/validateId.js";
 
 export const getAllContacts = async (req, res, next) => {
   try {
@@ -21,9 +19,7 @@ export const getAllContacts = async (req, res, next) => {
 
 export const getOneContact = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    validateId(id);
-    const contact = await contacts.findById(id);
+    const contact = await contacts.findById(req.params.id);
 
     return res.status(200).json(contact);
   } catch (error) {
@@ -33,9 +29,7 @@ export const getOneContact = async (req, res, next) => {
 
 export const deleteContact = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    validateId(id);
-    const contact = await contacts.findByIdAndDelete(id);
+    const contact = await contacts.findByIdAndDelete(req.params.id);
 
     if (!contact) {
       throw HttpError(404);
@@ -64,18 +58,12 @@ export const createContact = async (req, res, next) => {
 
 export const updateContact = async (req, res, next) => {
   try {
-    const { id } = req.params;
-
-    validateId(id);
-
-    const newContact = req.body;
-
     const { error } = updateContactSchema.validate(req.body);
     if (error) {
       throw HttpError(400, error.message);
     }
 
-    const response = await contacts.findByIdAndUpdate(id, newContact, {
+    const response = await contacts.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     });
 
@@ -91,8 +79,6 @@ export const updateContact = async (req, res, next) => {
 
 export async function updateStatusContact(req, res, next) {
   try {
-    const { id } = req.params;
-    validateId(id);
     const { error } = updateFavoriteSchema.validate(req.body);
     if (error) {
       throw HttpError(400, error.message);
@@ -101,7 +87,7 @@ export async function updateStatusContact(req, res, next) {
     const newStatus = req.body.favorite;
 
     const response = await contacts.findByIdAndUpdate(
-      id,
+      req.params.id,
       {
         favorite: newStatus,
       },
