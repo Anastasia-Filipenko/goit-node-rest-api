@@ -21,7 +21,7 @@ export const getAllContacts = async (req, res, next) => {
 export const getOneContact = async (req, res, next) => {
   try {
     const contact = await contacts.findOne({
-      _id: req.body.id,
+      _id: req.params.id,
       owner: req.user.id,
     });
 
@@ -36,7 +36,10 @@ export const getOneContact = async (req, res, next) => {
 
 export const deleteContact = async (req, res, next) => {
   try {
-    const contact = await contacts.findByIdAndDelete(req.params.id);
+    const contact = await contacts.findOneAndDelete({
+      _id: req.params.id,
+      owner: req.user.id,
+    });
 
     if (!contact) {
       throw HttpError(404);
@@ -73,9 +76,14 @@ export const updateContact = async (req, res, next) => {
       throw HttpError(400, error.message);
     }
 
-    const response = await contacts.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const response = await contacts.findOneAndUpdate(
+      { _id: req.params.id, owner: req.user.id },
+      req.body,
+
+      {
+        new: true,
+      }
+    );
 
     if (!response) {
       throw HttpError(404);
@@ -96,11 +104,12 @@ export async function updateStatusContact(req, res, next) {
 
     const newStatus = req.body.favorite;
 
-    const response = await contacts.findByIdAndUpdate(
-      req.params.id,
+    const response = await contacts.findOneAndUpdate(
+      { _id: req.params.id, owner: req.user.id },
       {
         favorite: newStatus,
       },
+
       {
         new: true,
       }
