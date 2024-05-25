@@ -9,8 +9,9 @@ import contacts from "../models/contacts.js";
 
 export const getAllContacts = async (req, res, next) => {
   try {
-    const allContacts = await contacts.find();
-
+    console.log("req.user в getAllContacts:", req.user);
+    const allContacts = await contacts.find({ owner: req.user.id });
+    console.log("req.user:", req.user);
     return res.status(200).json(allContacts);
   } catch (error) {
     next(error);
@@ -19,8 +20,14 @@ export const getAllContacts = async (req, res, next) => {
 
 export const getOneContact = async (req, res, next) => {
   try {
-    const contact = await contacts.findById(req.params.id);
+    const contact = await contacts.findOne({
+      _id: req.params.id,
+      owner: req.user.id,
+    });
 
+    if (contact === null) {
+      throw HttpError(404);
+    }
     return res.status(200).json(contact);
   } catch (error) {
     next(error);
@@ -29,7 +36,10 @@ export const getOneContact = async (req, res, next) => {
 
 export const deleteContact = async (req, res, next) => {
   try {
-    const contact = await contacts.findByIdAndDelete(req.params.id);
+    const contact = await contacts.findOneAndDelete({
+      _id: req.params.id,
+      owner: req.user.id,
+    });
 
     if (!contact) {
       throw HttpError(404);
@@ -48,7 +58,10 @@ export const createContact = async (req, res, next) => {
       throw HttpError(400, error.message);
     }
 
-    const contact = await contacts.create(req.body);
+    const contact = await contacts.create({
+      ...req.body,
+      owner: req.user.id,
+    });
 
     return res.status(201).send(contact);
   } catch (error) {
@@ -63,9 +76,14 @@ export const updateContact = async (req, res, next) => {
       throw HttpError(400, error.message);
     }
 
-    const response = await contacts.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const response = await contacts.findOneAndUpdate(
+      { _id: req.params.id, owner: req.user.id },
+      req.body,
+
+      {
+        new: true,
+      }
+    );
 
     if (!response) {
       throw HttpError(404);
@@ -86,11 +104,12 @@ export async function updateStatusContact(req, res, next) {
 
     const newStatus = req.body.favorite;
 
-    const response = await contacts.findByIdAndUpdate(
-      req.params.id,
+    const response = await contacts.findOneAndUpdate(
+      { _id: req.params.id, owner: req.user.id },
       {
         favorite: newStatus,
       },
+
       {
         new: true,
       }
