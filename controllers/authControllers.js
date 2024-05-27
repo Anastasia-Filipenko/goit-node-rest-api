@@ -117,16 +117,22 @@ export async function getCurrentUser(req, res, next) {
 
 export async function uploadAvatar(req, res, next) {
   try {
+    if (!req.file) {
+      throw HttpError(400, "File not provided");
+    }
     const avatar = await Jimp.read(req.file.path);
-    await avatar.resize(250, 250);
+    await avatar.resize(250, 250).writeAsync(req.file.path);
+
     await fs.rename(
       req.file.path,
       path.resolve("public/avatars", req.file.filename)
     );
 
+    const avatarURL = path.join("/avatars", req.file.filename);
+
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      { avatarURL: req.file.filename },
+      { avatarURL },
       { new: true }
     );
 
