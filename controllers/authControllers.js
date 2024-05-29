@@ -3,6 +3,10 @@ import jwt from "jsonwebtoken";
 import HttpError from "../helpers/HttpError.js";
 import User from "../models/user.js";
 import { userLoginSchema, userRegisterSchema } from "../schemas/userSchemas.js";
+import * as fs from "node:fs/promises";
+import path from "node:path";
+import gravatar from "gravatar";
+import Jimp from "jimp";
 
 export async function register(req, res, next) {
   const { email, password } = req.body;
@@ -19,9 +23,17 @@ export async function register(req, res, next) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+
+    const gravatarUrl = gravatar.url(email, {
+      s: "250",
+      r: "pg",
+      d: "identicon",
+    });
+
     const response = await User.create({
       email,
       password: passwordHash,
+      avatarURL: gravatarUrl,
     });
 
     const registeredUser = {
@@ -98,6 +110,37 @@ export async function getCurrentUser(req, res, next) {
       subscription: user.subscription,
     };
     return res.status(200).send(currentUser);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadAvatar(req, res, next) {
+  try {
+    if (!req.file) {
+      throw HttpError(400, "File not provided");
+    }
+    const avatar = await Jimp.read(req.file.path);
+    await avatar.resize(250, 250).writeAsync(req.file.path);
+
+    await fs.rename(
+      req.file.path,
+      path.resolve("public/avatars", req.file.filename)
+    );
+
+    const avatarURL = path.join("/avatars", req.file.filename);
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { avatarURL },
+      { new: true }
+    );
+
+    if (user === null) {
+      throw HttpError(401);
+    }
+
+    return res.status(200).send(user.avatarURL);
   } catch (error) {
     next(error);
   }
