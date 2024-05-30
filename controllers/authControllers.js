@@ -2,11 +2,17 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import HttpError from "../helpers/HttpError.js";
 import User from "../models/user.js";
-import { userLoginSchema, userRegisterSchema } from "../schemas/userSchemas.js";
+import {
+  userLoginSchema,
+  userRegisterSchema,
+  userVerifySchema,
+} from "../schemas/userSchemas.js";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import gravatar from "gravatar";
 import Jimp from "jimp";
+import { mail } from "../mail.js";
+import crypto from "node:crypto";
 
 export async function register(req, res, next) {
   const { email, password } = req.body;
@@ -23,7 +29,7 @@ export async function register(req, res, next) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-
+    const verificationToken = crypto.randomUUID();
     const gravatarUrl = gravatar.url(email, {
       s: "250",
       r: "pg",
@@ -34,6 +40,7 @@ export async function register(req, res, next) {
       email,
       password: passwordHash,
       avatarURL: gravatarUrl,
+      verificationToken,
     });
 
     const registeredUser = {
@@ -42,6 +49,14 @@ export async function register(req, res, next) {
         subscription: response.subscription,
       },
     };
+
+    mail({
+      to: response.email,
+      from: "phonebook@gmail.com",
+      subject: "Welcome!",
+      html: `To confirm your email please click on the <a href='http://localhost:3000/users/verify/${verificationToken}'>link</a>`,
+      text: `To confirm your email please open the link http://localhost:3000/users/verify/${verificationToken}`,
+    });
 
     return res.status(201).send(registeredUser);
   } catch (error) {
@@ -66,6 +81,10 @@ export async function login(req, res, next) {
 
     if (isMatch === false) {
       throw HttpError(401, "Email or password is wrong");
+    }
+
+    if (user.verify === false) {
+      throw HttpError(401, "Please verify your email");
     }
     const token = jwt.sign(
       { id: user._id, email: user.email },
@@ -141,6 +160,66 @@ export async function uploadAvatar(req, res, next) {
     }
 
     return res.status(200).send(user.avatarURL);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function verify(req, res, next) {
+  try {
+    const { verificationToken } = req.params;
+    const user = await User.findOneAndUpdate(
+      { verificationToken },
+      {
+        verify: true,
+        verificationToken: null,
+      },
+      { new: true }
+    );
+
+    if (user === null) {
+      throw HttpError(404, "User not found");
+    }
+
+    return res.status(200).send("Verification successful");
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function reVerify(req, res, next) {
+  try {
+    const { email } = req.body;
+
+    const { error } = userVerifySchema.validate(req.body);
+    if (error) {
+      throw HttpError(400);
+    }
+
+    const user = await User.findOne({ email });
+
+    if (user.verify === true) {
+      throw HttpError(400, "Verification has already been passed");
+    }
+    const verificationToken = crypto.randomUUID();
+
+    await User.findOneAndUpdate(
+      { email },
+      {
+        verificationToken,
+      },
+      { new: true }
+    );
+
+    mail({
+      to: email,
+      from: "phonebook@gmail.com",
+      subject: "Welcome!",
+      html: `To confirm your email please click on the <a href='http://localhost:3000/users/verify/${verificationToken}'>link</a>`,
+      text: `To confirm your email please open the link http://localhost:3000/users/verify/${verificationToken}`,
+    });
+
+    return res.status(200).send("Verification email sent");
   } catch (error) {
     next(error);
   }
