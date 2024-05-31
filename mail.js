@@ -18,8 +18,8 @@ export function mail(email, token) {
     to: email,
     from: from,
     subject: "Welcome!",
-    html: `To confirm your email please click on the <a href='http://localhost:3000/users/verify/${token}'>link</a>`,
-    text: `To confirm your email please open the link http://localhost:3000/users/verify/${token}`,
+    html: `To confirm your email please click on the <a href='${baseURL}/users/verify/${token}'>link</a>`,
+    text: `To confirm your email please open the link ${baseURL}/users/verify/${token}`,
   };
 
   return transport.sendMail(mailOption);
