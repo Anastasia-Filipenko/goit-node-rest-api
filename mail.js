@@ -10,6 +10,17 @@ const transport = nodemailer.createTransport({
   },
 });
 
-export function mail(message) {
-  return transport.sendMail(message);
+export function mail(email, token) {
+  const from = process.env.EMAIL_FROM;
+  const baseURL = process.env.BASE_URL;
+
+  const mailOption = {
+    to: email,
+    from: from,
+    subject: "Welcome!",
+    html: `To confirm your email please click on the <a href='http://localhost:3000/users/verify/${token}'>link</a>`,
+    text: `To confirm your email please open the link http://localhost:3000/users/verify/${token}`,
+  };
+
+  return transport.sendMail(mailOption);
 }

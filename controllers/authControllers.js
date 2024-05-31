@@ -50,13 +50,7 @@ export async function register(req, res, next) {
       },
     };
 
-    mail({
-      to: response.email,
-      from: "phonebook@gmail.com",
-      subject: "Welcome!",
-      html: `To confirm your email please click on the <a href='http://localhost:3000/users/verify/${verificationToken}'>link</a>`,
-      text: `To confirm your email please open the link http://localhost:3000/users/verify/${verificationToken}`,
-    });
+    mail(response.email, verificationToken);
 
     return res.status(201).send(registeredUser);
   } catch (error) {
@@ -211,13 +205,7 @@ export async function reVerify(req, res, next) {
       { new: true }
     );
 
-    mail({
-      to: email,
-      from: "phonebook@gmail.com",
-      subject: "Welcome!",
-      html: `To confirm your email please click on the <a href='http://localhost:3000/users/verify/${verificationToken}'>link</a>`,
-      text: `To confirm your email please open the link http://localhost:3000/users/verify/${verificationToken}`,
-    });
+    mail(email, verificationToken);
 
     return res.status(200).send("Verification email sent");
   } catch (error) {
